@@ -5,6 +5,31 @@
     box-sizing: border-box;
 }
 
+/* Spell Effect Animations */
+.spell-effect {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    pointer-events: none; /* Make sure it doesn't block clicks */
+    animation: fade-and-scale 0.7s ease-out forwards;
+    z-index: 100; /* Ensure it's on top */
+}
+
+@keyframes fade-and-scale {
+    0% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.2);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.5);
+    }
+}
+
 body {
     font-family: 'Arial', sans-serif;
     background: linear-gradient(135deg, #2c5530, #1a3d1f);
@@ -297,7 +322,8 @@ body {
     transform: translateY(-2px);
 }
 
-.spell-menu {
+/* Submenus for Spells and Items */
+.spell-menu, .item-menu {
     background: rgba(0, 0, 0, 0.9);
     padding: 1.5rem;
     border: 2px solid #ffd700;
@@ -305,24 +331,24 @@ body {
     margin-top: 1rem;
 }
 
-.spell-menu.hidden {
+.spell-menu.hidden, .item-menu.hidden {
     display: none;
 }
 
-.spell-menu h4 {
+.spell-menu h4, .item-menu h4 {
     color: #ffd700;
     margin-bottom: 1rem;
     text-align: center;
 }
 
-.spell-list {
+.spell-list, .item-list {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 0.5rem;
     margin-bottom: 1rem;
 }
 
-.spell-btn {
+.spell-btn, .item-btn {
     padding: 0.8rem;
     background: linear-gradient(135deg, #4a7c59, #2c5530);
     color: #fff;
@@ -333,21 +359,21 @@ body {
     text-align: left;
 }
 
-.spell-btn:hover {
+.spell-btn:hover, .item-btn:hover {
     background: linear-gradient(135deg, #5a8c69, #3c6540);
 }
 
-.spell-btn .spell-name {
+.spell-btn .spell-name, .item-btn .item-name {
     font-weight: bold;
     display: block;
 }
 
-.spell-btn .spell-cost {
+.spell-btn .spell-cost, .item-btn .item-desc {
     font-size: 0.9rem;
     color: #ccc;
 }
 
-#back-to-actions {
+#back-to-actions-from-spell, #back-to-actions-from-item {
     padding: 0.8rem 1.5rem;
     background: linear-gradient(135deg, #7c4a4a, #5c3030);
     color: #fff;
@@ -357,7 +383,7 @@ body {
     transition: all 0.3s ease;
 }
 
-#back-to-actions:hover {
+#back-to-actions-from-spell:hover, #back-to-actions-from-item:hover {
     background: linear-gradient(135deg, #8c5a5a, #6c4040);
 }
 

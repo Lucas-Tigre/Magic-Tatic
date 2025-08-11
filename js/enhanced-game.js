@@ -41,17 +41,19 @@ class EnhancedMagicTactic {
             spells: [
                 { name: 'Bola de Fogo', element: 'fire', damage: 15, cost: 8 },
                 { name: 'Jato de Água', element: 'water', damage: 12, cost: 6 },
+                { name: 'Rajada de Vento', element: 'air', damage: 13, cost: 7 },
+                { name: 'Espinhos de Pedra', element: 'earth', damage: 14, cost: 7 },
                 { name: 'Cura Divina', element: 'light', heal: 20, cost: 10 }
             ]
         };
         
-        // Enemies data with area assignments
+        // Enemies data with area assignments (stats reduced for balance)
         this.enemies = [
-            { id: 1, name: 'Mago Negro do Fogo', x: 1200, y: 1500, area: 'destroyed', defeated: false, element: 'fire', hp: 60, maxHp: 60, attack: 10, defense: 3, speed: 6, drop: 'health_elixir' }, // Reduced attack
-            { id: 2, name: 'Mago Negro da Água', x: 1800, y: 1600, area: 'destroyed', defeated: false, element: 'water', hp: 65, maxHp: 65, attack: 9, defense: 4, speed: 7, drop: 'mana_elixir' }, // Reduced attack
-            { id: 3, name: 'Mago Negro da Terra', x: 1500, y: 1700, area: 'destroyed', defeated: false, element: 'earth', hp: 80, maxHp: 80, attack: 11, defense: 6, speed: 4, drop: 'health_elixir' }, // Reduced attack
-            { id: 4, name: 'Mago Negro do Ar', x: 1700, y: 1400, area: 'destroyed', defeated: false, element: 'air', hp: 55, maxHp: 55, attack: 12, defense: 2, speed: 10, drop: 'mana_elixir' }, // Reduced attack
-            { id: 5, name: 'Mago Negro das Trevas', x: 1600, y: 1800, area: 'destroyed', defeated: false, element: 'dark', hp: 70, maxHp: 70, attack: 13, defense: 5, speed: 8, drop: 'legendary_elixir' } // Reduced attack
+            { id: 1, name: 'Mago Negro do Fogo', x: 1200, y: 1500, area: 'destroyed', defeated: false, element: 'fire', hp: 45, maxHp: 45, attack: 8, defense: 3, speed: 6, drop: 'health_elixir' },
+            { id: 2, name: 'Mago Negro da Água', x: 1800, y: 1600, area: 'destroyed', defeated: false, element: 'water', hp: 50, maxHp: 50, attack: 7, defense: 4, speed: 7, drop: 'mana_elixir' },
+            { id: 3, name: 'Mago Negro da Terra', x: 1500, y: 1700, area: 'destroyed', defeated: false, element: 'earth', hp: 60, maxHp: 60, attack: 9, defense: 6, speed: 4, drop: 'health_elixir' },
+            { id: 4, name: 'Mago Negro do Ar', x: 1700, y: 1400, area: 'destroyed', defeated: false, element: 'air', hp: 40, maxHp: 40, attack: 10, defense: 2, speed: 10, drop: 'mana_elixir' },
+            { id: 5, name: 'Mago Negro das Trevas', x: 1600, y: 1800, area: 'destroyed', defeated: false, element: 'dark', hp: 55, maxHp: 55, attack: 10, defense: 5, speed: 8, drop: 'legendary_elixir' }
         ];
         
         this.boss = {
@@ -115,31 +117,45 @@ class EnhancedMagicTactic {
 
     generateMapData() {
         const map = [];
+        // The center of the "destroyed" area is conceptually at the bottom-right corner.
+        const destroyedCenterX = this.mapWidth;
+        const destroyedCenterY = this.mapHeight;
+        // The maximum possible distance from this center is the top-left corner.
+        const maxDist = Math.hypot(destroyedCenterX, destroyedCenterY);
+
         for (let y = 0; y < this.mapHeight; y++) {
             map[y] = [];
             for (let x = 0; x < this.mapWidth; x++) {
-                // Forest area (top left quadrant)
-                if (x < this.mapWidth / 2 && y < this.mapHeight / 2) {
-                    if (Math.random() < 0.05) map[y][x] = 1; // Trees
-                    else if (Math.random() < 0.02) map[y][x] = 2; // Rocks
-                    else map[y][x] = 0; // Grass
-                } 
-                // Destroyed forest area (bottom right quadrant)
-                else if (x >= this.mapWidth / 2 && y >= this.mapHeight / 2) {
-                    if (Math.random() < 0.05) map[y][x] = 3; // Dead trees
-                    else if (Math.random() < 0.02) map[y][x] = 4; // Barren ground
-                    else map[y][x] = 0; // Grass (still some grass)
-                }
-                // Transition area (top right and bottom left quadrants)
-                else {
-                    if (Math.random() < 0.03) map[y][x] = 1; // Trees
-                    else if (Math.random() < 0.01) map[y][x] = 3; // Dead trees
-                    else map[y][x] = 0; // Grass
+                // Calculate the distance of the current tile from the "destroyed" center.
+                const distFromDestroyed = Math.hypot(x - destroyedCenterX, y - destroyedCenterY);
+
+                // Normalize this distance to create a "destruction factor" from 0 (lush) to 1 (destroyed).
+                // We do this by seeing how close it is to the center, relative to the max distance.
+                const destructionFactor = (maxDist - distFromDestroyed) / maxDist;
+
+                // The base tile is always grass.
+                map[y][x] = 0;
+
+                // Now, let's place features. We'll give each tile a chance to have a feature.
+                const featureRand = Math.random();
+                if (featureRand < 0.12) { // 12% chance for a feature to spawn on a grass tile.
+
+                    // The type of feature depends on the destructionFactor.
+                    if (Math.random() < destructionFactor) {
+                        // If a random number is less than the factor, we are in a "more destroyed" zone.
+                        // Place a destroyed-looking feature.
+                        map[y][x] = Math.random() < 0.7 ? 3 : 4; // 70% chance of a dead tree, 30% for barren ground.
+                    } else {
+                        // Otherwise, we are in a "more lush" zone.
+                        // Place a lush-looking feature.
+                        map[y][x] = Math.random() < 0.8 ? 1 : 2; // 80% chance of a healthy tree, 20% for a rock.
+                    }
                 }
             }
         }
 
-        // Add houses in the forest area
+        // Manually place key structures after generation to ensure they are not overridden.
+        // These are placed in the top-left, the most "lush" area.
         map[5][5] = 7; // House
         map[10][15] = 8; // Cabin
 
@@ -208,8 +224,8 @@ class EnhancedMagicTactic {
         this.gameState = "playing";
         // Only start the game loop if it's not already running
         if (!this.gameLoopRunning) {
-            this.startGameLoop();
             this.gameLoopRunning = true;
+            this.gameLoop();
         }
     }
     
@@ -223,19 +239,19 @@ class EnhancedMagicTactic {
         
         // Battle buttons
         document.getElementById('attack-btn').addEventListener('click', () => this.showSpellMenu());
+        document.getElementById('item-btn').addEventListener('click', () => this.showItemMenu());
         document.getElementById('defend-btn').addEventListener('click', () => this.playerDefend());
         document.getElementById('run-btn').addEventListener('click', () => this.playerRun());
-        document.getElementById('back-to-actions').addEventListener('click', () => this.hideSpellMenu());
+        document.getElementById('back-to-actions-from-spell').addEventListener('click', () => this.hideSubMenus());
+        document.getElementById('back-to-actions-from-item').addEventListener('click', () => this.hideSubMenus());
         
         // Level up buttons
+        this.setupLevelUpListeners();
         document.getElementById('confirm-stats').addEventListener('click', () => this.confirmStatDistribution());
         
         // Keyboard controls
         document.addEventListener('keydown', (e) => {
             this.keys[e.key] = true;
-            if (this.gameState === 'playing') {
-                // No direct movement here, handled in updateGameLoop
-            }
         });
         
         document.addEventListener('keyup', (e) => {
@@ -274,31 +290,14 @@ class EnhancedMagicTactic {
     showInstructions() {
         this.showScreen('instructions-screen');
     }
-       startGame() {
-        this.showScreen("game-screen");
-        this.gameState = "playing";
-        // Only start the game loop if it's not already running
-        if (!this.gameLoopRunning) {
-            this.startGameLoop();
-            this.gameLoopRunning = true;
-        }
-    }
-    
-    startGameLoop() {
-        // This function will be called only once when the game starts
-        const gameLoop = () => {
-            if (this.gameState === 'playing') {
-                this.updateGameLoop();
-            }
-            requestAnimationFrame(gameLoop);
-        };
-        requestAnimationFrame(gameLoop);
-    }
-    
-    setupEventListeners() {
-        // Menu buttons
-        document.getElementById("start-game").addEventListener("click", () => this.startGame());
-        document.getElementById("instructions").addEventListener("click", () => this.showInstructions());
+
+    restartGame() {
+        this.player = {
+            ...this.player,
+            x: this.mapWidth * this.tileSize / 2,
+            y: this.mapHeight * this.tileSize / 2,
+            level: 1,
+            exp: 0,
             expToNext: 100,
             hp: 100,
             maxHp: 100,
@@ -309,17 +308,12 @@ class EnhancedMagicTactic {
             speed: 8,
             gold: 0,
             inventory: [],
-            spells: [
-                { name: 'Bola de Fogo', element: 'fire', damage: 15, cost: 8 },
-                { name: 'Jato de Água', element: 'water', damage: 12, cost: 6 },
-                { name: 'Cura Divina', element: 'light', heal: 20, cost: 10 }
-            ]
+            statPoints: 0
         };
         
-        // Reset enemies
-        this.enemies.forEach(enemy => {
-            enemy.defeated = false;
-            enemy.hp = enemy.maxHp;
+        this.enemies.forEach(e => {
+            e.defeated = false;
+            e.hp = e.maxHp;
         });
         
         this.boss.defeated = false;
@@ -328,24 +322,24 @@ class EnhancedMagicTactic {
         
         this.startGame();
     }
-    
-    startGameLoop() {
-        this.updateGameLoop();
-        requestAnimationFrame(() => this.startGameLoop());
+
+    gameLoop() {
+        this.updateGame();
+        requestAnimationFrame(() => this.gameLoop());
     }
 
-    updateGameLoop() {
+    updateGame() {
         if (this.gameState === 'playing') {
             this.handleMovement();
             this.checkEnemyCollisions();
-            this.updateSpellEffects();
-            this.updateUI();
             this.draw();
         }
+        // Always update UI regardless of state to reflect changes
+        this.updateUI();
     }
     
     handleMovement() {
-        const speed = 5; // Increased speed for better feel
+        const speed = 5;
         let newX = this.player.x;
         let newY = this.player.y;
         
@@ -354,18 +348,15 @@ class EnhancedMagicTactic {
         if (this.keys['ArrowLeft'] || this.keys['a']) newX -= speed;
         if (this.keys['ArrowRight'] || this.keys['d']) newX += speed;
         
-        // Keep player within map bounds
         newX = Math.max(this.tileSize / 2, Math.min(this.mapWidth * this.tileSize - this.tileSize / 2, newX));
         newY = Math.max(this.tileSize / 2, Math.min(this.mapHeight * this.tileSize - this.tileSize / 2, newY));
         
         this.player.x = newX;
         this.player.y = newY;
         
-        // Update player offset for smooth scrolling
         this.playerOffsetX = this.player.x - this.canvas.width / 2;
         this.playerOffsetY = this.player.y - this.canvas.height / 2;
 
-        // Clamp offsets to map boundaries
         this.playerOffsetX = Math.max(0, Math.min(this.mapWidth * this.tileSize - this.canvas.width, this.playerOffsetX));
         this.playerOffsetY = Math.max(0, Math.min(this.mapHeight * this.tileSize - this.canvas.height, this.playerOffsetY));
     }
@@ -374,29 +365,23 @@ class EnhancedMagicTactic {
         const playerRadius = 20;
         const enemyRadius = 25;
         
-        // Check regular enemies in current area
-        this.enemies.forEach(enemy => {
-            if (!enemy.defeated) { // Check all enemies, not just current area
-                const distance = Math.sqrt(
-                    Math.pow(this.player.x - enemy.x, 2) + 
-                    Math.pow(this.player.y - enemy.y, 2)
-                );
-                
+        for (const enemy of this.enemies) {
+            if (!enemy.defeated) {
+                const distance = Math.hypot(this.player.x - enemy.x, this.player.y - enemy.y);
                 if (distance < playerRadius + enemyRadius) {
                     this.startBattle(enemy);
+                    return;
                 }
             }
-        });
+        }
         
-        // Check boss (only if unlocked and all other enemies defeated)
-        const allEnemiesDefeated = this.enemies.every(enemy => enemy.defeated);
-        if (allEnemiesDefeated && !this.boss.defeated) {
-            this.boss.unlocked = true; // Unlock boss after all enemies are defeated
-            const distance = Math.sqrt(
-                Math.pow(this.player.x - this.boss.x, 2) + 
-                Math.pow(this.player.y - this.boss.y, 2)
-            );
-            
+        const allEnemiesDefeated = this.enemies.every(e => e.defeated);
+        if (allEnemiesDefeated && !this.boss.unlocked) {
+            this.boss.unlocked = true;
+        }
+
+        if (this.boss.unlocked && !this.boss.defeated) {
+            const distance = Math.hypot(this.player.x - this.boss.x, this.player.y - this.boss.y);
             if (distance < playerRadius + 30) {
                 this.startBattle(this.boss);
             }
@@ -408,28 +393,21 @@ class EnhancedMagicTactic {
         this.gameState = 'battle';
         this.battleState = 'choosing';
         this.showScreen('battle-screen');
-        this.updateBattleUI();
         this.setBattleBackground();
         this.setBattleMessage(`Um ${enemy.name} apareceu!`);
+        this.updateBattleUI();
     }
     
     setBattleBackground() {
         const battleScreen = document.getElementById('battle-screen');
-        let bgImage = '';
+        let bgImage = 'url(assets/images/battle_bg_forest.png)';
         
-        // Determine background based on enemy's area, not player's currentArea
         switch (this.currentEnemy.area) {
-            case 'forest':
-                bgImage = 'url(assets/images/battle_bg_forest.png)';
-                break;
             case 'destroyed':
                 bgImage = 'url(assets/images/battle_bg_destroyed_forest.png)';
                 break;
             case 'dark_lair':
                 bgImage = 'url(assets/images/battle_bg_dark_lair.png)';
-                break;
-            default:
-                bgImage = 'url(assets/images/battle_bg_forest.png)'; // Fallback
                 break;
         }
         
@@ -444,30 +422,109 @@ class EnhancedMagicTactic {
         this.populateSpellMenu();
     }
     
-    hideSpellMenu() {
+    hideSubMenus() {
         document.getElementById('battle-actions').style.display = 'flex';
         document.getElementById('spell-menu').classList.add('hidden');
+        document.getElementById('item-menu').classList.add('hidden');
+    }
+
+    showItemMenu() {
+        document.getElementById('battle-actions').style.display = 'none';
+        document.getElementById('item-menu').classList.remove('hidden');
+        this.populateItemMenu();
+    }
+
+    populateItemMenu() {
+        const itemList = document.getElementById('item-list');
+        itemList.innerHTML = '';
+
+        if (this.player.inventory.length === 0) {
+            itemList.innerHTML = '<p>Nenhum item no inventário.</p>';
+            return;
+        }
+
+        // Count item quantities
+        const itemCounts = this.player.inventory.reduce((acc, item) => {
+            acc[item] = (acc[item] || 0) + 1;
+            return acc;
+        }, {});
+
+        for (const itemName in itemCounts) {
+            const item = this.getItemData(itemName);
+            if (!item) continue;
+
+            const itemBtn = document.createElement('button');
+            itemBtn.className = 'item-btn';
+            itemBtn.innerHTML = `
+                <span class="item-name">${item.name} (x${itemCounts[itemName]})</span>
+                <span class="item-desc">${item.description}</span>
+            `;
+            itemBtn.onclick = () => this.useItem(itemName);
+            itemList.appendChild(itemBtn);
+        }
+    }
+
+    useItem(itemName) {
+        const item = this.getItemData(itemName);
+        if (!item) return;
+
+        // Apply effect
+        if (item.effect.hp) {
+            this.player.hp = Math.min(this.player.maxHp, this.player.hp + item.effect.hp);
+        }
+        if (item.effect.mp) {
+            this.player.mp = Math.min(this.player.maxMp, this.player.mp + item.effect.mp);
+        }
+
+        // Remove one item from inventory
+        const itemIndex = this.player.inventory.indexOf(itemName);
+        if (itemIndex > -1) {
+            this.player.inventory.splice(itemIndex, 1);
+        }
+
+        this.setBattleMessage(`Você usou ${item.name}!`);
+        this.hideSubMenus();
+        this.updateBattleUI();
+
+        // Enemy takes its turn after player uses an item
+        setTimeout(() => this.enemyTurn(), 1500);
+    }
+
+    getItemData(itemName) {
+        const itemDatabase = {
+            'health_elixir': {
+                name: 'Elixir de Vida',
+                description: 'Restaura 50 HP.',
+                effect: { hp: 50 }
+            },
+            'mana_elixir': {
+                name: 'Elixir de Mana',
+                description: 'Restaura 30 MP.',
+                effect: { mp: 30 }
+            },
+            'legendary_elixir': {
+                name: 'Elixir Lendário',
+                description: 'Restaura 100 HP e 50 MP.',
+                effect: { hp: 100, mp: 50 }
+            }
+        };
+        return itemDatabase[itemName];
     }
     
     populateSpellMenu() {
         const spellList = document.getElementById('spell-list');
         spellList.innerHTML = '';
         
-        this.player.spells.forEach((spell, index) => {
+        this.player.spells.forEach(spell => {
             const spellBtn = document.createElement('button');
             spellBtn.className = 'spell-btn';
-            spellBtn.innerHTML = `
-                <span class="spell-name">${spell.name}</span>
-                <span class="spell-cost">Custo: ${spell.cost} MP</span>
-            `;
+            spellBtn.innerHTML = `<span class="spell-name">${spell.name}</span><span class="spell-cost">Custo: ${spell.cost} MP</span>`;
             
             if (this.player.mp >= spell.cost) {
-                spellBtn.addEventListener('click', () => this.playerAttack(spell));
+                spellBtn.onclick = () => this.playerAttack(spell);
             } else {
                 spellBtn.disabled = true;
-                spellBtn.style.opacity = '0.5';
             }
-            
             spellList.appendChild(spellBtn);
         });
     }
@@ -479,60 +536,93 @@ class EnhancedMagicTactic {
         }
         
         this.player.mp -= spell.cost;
-        this.hideSpellMenu();
-        
-        // Add spell effect
+        this.hideSubMenus();
         this.addSpellEffect(spell, 'player');
         
         if (spell.heal) {
-            // Healing spell
             const healAmount = spell.heal;
             this.player.hp = Math.min(this.player.maxHp, this.player.hp + healAmount);
-            this.setBattleMessage(`Você se curou em ${healAmount} pontos de vida!`);
+            this.setBattleMessage(`Você se curou em ${healAmount} de vida!`);
         } else {
-            // Attack spell
             let damage = spell.damage + this.player.attack;
-            
-            // Apply element effectiveness
             const effectiveness = this.getElementEffectiveness(spell.element, this.currentEnemy.element);
             damage = Math.floor(damage * effectiveness);
-            
-            // Apply enemy defense
             damage = Math.max(1, damage - this.currentEnemy.defense);
-            
             this.currentEnemy.hp -= damage;
             
             let message = `Você usou ${spell.name} e causou ${damage} de dano!`;
             if (effectiveness > 1) message += ' É super efetivo!';
             if (effectiveness < 1) message += ' Não é muito efetivo...';
-            
             this.setBattleMessage(message);
         }
         
         this.updateBattleUI();
         
         if (this.currentEnemy.hp <= 0) {
-            setTimeout(() => this.enemyDefeated(), 1500);
+            setTimeout(() => this.endBattle(true), 1500);
         } else {
             setTimeout(() => this.enemyTurn(), 1500);
         }
     }
     
     addSpellEffect(spell, caster) {
-        const effect = {
-            spell: spell,
-            caster: caster,
-            duration: 60, // frames
-            frame: 0
-        };
-        this.spellEffects.push(effect);
-    }
-    
-    updateSpellEffects() {
-        this.spellEffects = this.spellEffects.filter(effect => {
-            effect.frame++;
-            return effect.frame < effect.duration;
-        });
+        const battleScreen = document.getElementById('battle-screen');
+        if (!battleScreen) return;
+
+        let effectImageSrc = '';
+        switch (spell.element) {
+            case 'fire':
+                effectImageSrc = 'assets/images/fire_spell_effect.png';
+                break;
+            case 'water':
+                effectImageSrc = 'assets/images/water_spell_effect.png';
+                break;
+            case 'light': // This is used for healing
+                effectImageSrc = 'assets/images/heal_spell_effect.png';
+                break;
+            case 'air':
+                effectImageSrc = 'assets/images/lightning_spell_effect.png';
+                break;
+            case 'earth':
+                effectImageSrc = 'assets/images/earthquake_spell_effect.png';
+                break;
+            case 'defense':
+                effectImageSrc = 'assets/images/shield_spell_effect.png';
+                break;
+        }
+
+        if (!effectImageSrc) return;
+
+        const effectImg = document.createElement('img');
+        effectImg.src = effectImageSrc;
+        effectImg.className = 'spell-effect';
+
+        let targetElement;
+        if (spell.heal) {
+            targetElement = document.getElementById('player-sprite');
+        } else {
+            targetElement = caster === 'player'
+                ? document.getElementById('enemy-sprite')
+                : document.getElementById('player-sprite');
+        }
+
+        if (!targetElement) return;
+
+        const targetRect = targetElement.getBoundingClientRect();
+        const battleRect = battleScreen.getBoundingClientRect();
+
+        // Position the effect over the center of the target
+        effectImg.style.left = `${targetRect.left - battleRect.left + (targetRect.width / 2) - 50}px`; // 50 is half of effect width
+        effectImg.style.top = `${targetRect.top - battleRect.top + (targetRect.height / 2) - 50}px`; // 50 is half of effect height
+
+        battleScreen.appendChild(effectImg);
+
+        // Remove the effect element after the animation finishes (700ms)
+        setTimeout(() => {
+            if (effectImg.parentNode === battleScreen) {
+                battleScreen.removeChild(effectImg);
+            }
+        }, 700);
     }
     
     playerDefend() {
@@ -544,43 +634,33 @@ class EnhancedMagicTactic {
     
     playerRun() {
         this.setBattleMessage('Você fugiu da batalha!');
-        setTimeout(() => {
-            this.gameState = 'playing';
-            this.showScreen('game-screen');
-            // No need to call startGameLoop here, it's already running
-        }, 1500);
+        setTimeout(() => this.endBattle(false), 1500);
     }
     
     enemyTurn() {
         if (this.currentEnemy.hp <= 0) return;
         
-        // Simple AI: attack with random spell
         const enemySpells = this.getEnemySpells(this.currentEnemy.element);
         const spell = enemySpells[Math.floor(Math.random() * enemySpells.length)];
-        
-        // Add enemy spell effect
         this.addSpellEffect(spell, 'enemy');
         
         let damage = spell.damage + this.currentEnemy.attack;
-        const effectiveness = this.getElementEffectiveness(spell.element, 'light'); // Assume player is light element
+        const effectiveness = this.getElementEffectiveness(spell.element, 'light');
         damage = Math.floor(damage * effectiveness);
         damage = Math.max(1, damage - this.player.defense);
-        
         this.player.hp -= damage;
         
         let message = `${this.currentEnemy.name} usou ${spell.name} e causou ${damage} de dano!`;
         if (effectiveness > 1) message += ' É super efetivo!';
-        
         this.setBattleMessage(message);
         this.updateBattleUI();
         
         if (this.player.hp <= 0) {
             setTimeout(() => this.gameOver(), 1500);
         } else {
-            setTimeout(() => {
-                this.battleState = 'choosing';
-                this.setBattleMessage('Escolha sua ação!');
-            }, 1500);
+            this.battleState = 'choosing';
+            this.setBattleMessage('Escolha sua ação!');
+            document.getElementById('battle-actions').style.display = 'flex';
         }
     }
     
@@ -588,98 +668,111 @@ class EnhancedMagicTactic {
         const spells = {
             fire: [{ name: 'Bola de Fogo', element: 'fire', damage: 12 }],
             water: [{ name: 'Jato de Água', element: 'water', damage: 10 }],
-            earth: [{ name: 'Pedra Afiada', element: 'earth', damage: 14 }], // New spell for earth enemy
-            air: [{ name: 'Vendaval', element: 'air', damage: 11 }], // New spell for air enemy
-            dark: [{ name: 'Sombra Negra', element: 'dark', damage: 15 }] // New spell for dark enemy
+            earth: [{ name: 'Pedra Afiada', element: 'earth', damage: 14 }],
+            air: [{ name: 'Vendaval', element: 'air', damage: 11 }],
+            dark: [{ name: 'Sombra Negra', element: 'dark', damage: 15 }]
         };
         return spells[element] || [];
     }
     
-    enemyDefeated() {
-        this.setBattleMessage(`${this.currentEnemy.name} foi derrotado!`);
-        this.currentEnemy.defeated = true;
-        this.player.exp += 50; // Gain experience
-        this.player.gold += 20; // Gain gold
+    endBattle(isVictory) {
+        if (isVictory) {
+            this.setBattleMessage(`${this.currentEnemy.name} foi derrotado!`);
+            this.currentEnemy.defeated = true;
+            this.player.exp += 50;
+            this.player.gold += 20;
 
-        // Item drop chance
-        if (this.currentEnemy.drop) {
-            this.player.inventory.push(this.currentEnemy.drop);
-            this.setBattleMessage(`Você encontrou um ${this.currentEnemy.drop.replace('_', ' ')}!`);
+            if (this.currentEnemy.drop) {
+                this.player.inventory.push(this.currentEnemy.drop);
+                this.setBattleMessage(`Você encontrou um ${this.currentEnemy.drop.replace('_', ' ')}!`);
+            }
+
+            if (this.player.exp >= this.player.expToNext) {
+                this.levelUp();
+                return;
+            }
         }
-
-        this.checkLevelUp();
-        this.updateUI();
         
+        this.gameState = 'playing';
+        this.showScreen('game-screen');
+    }
+    
+    levelUp() {
+        this.player.level++;
+        this.player.exp -= this.player.expToNext;
+        this.player.expToNext = Math.floor(this.player.expToNext * 1.5);
+        this.player.statPoints = (this.player.statPoints || 0) + 3;
+
+        this.setBattleMessage(`Você subiu para o nível ${this.player.level}!`);
         setTimeout(() => {
-            this.gameState = 'playing';
-            this.showScreen('game-screen');
-            // No need to call startGameLoop here, it's already running
+            this.showScreen('levelup-screen');
+            this.updateLevelUpUI();
         }, 1500);
     }
-    
-    checkLevelUp() {
-        if (this.player.exp >= this.player.expToNext) {
-            this.player.level++;
-            this.player.exp -= this.player.expToNext;
-            this.player.expToNext = Math.floor(this.player.expToNext * 1.5);
-            this.player.statPoints += 3; // Gain stat points
-            this.setBattleMessage(`Você subiu para o nível ${this.player.level}!`);
-            this.showScreen('level-up-screen');
-            this.updateStatPointsUI();
-        }
+
+    setupLevelUpListeners() {
+        document.querySelectorAll('.stat-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const stat = button.dataset.stat;
+                if (this.player.statPoints > 0) {
+                    this.player.statPoints--;
+                    switch (stat) {
+                        case 'hp': this.player.maxHp += 10; this.player.hp += 10; break;
+                        case 'mp': this.player.maxMp += 5; this.player.mp += 5; break;
+                        case 'attack': this.player.attack++; break;
+                        case 'defense': this.player.defense++; break;
+                        case 'speed': this.player.speed++; break;
+                    }
+                    this.updateLevelUpUI();
+                }
+            });
+        });
     }
-    
-    updateStatPointsUI() {
-        document.getElementById('stat-points-available').textContent = this.player.statPoints;
+
+    updateLevelUpUI() {
+        document.getElementById('new-level').textContent = this.player.level;
+        document.getElementById('stat-points').textContent = this.player.statPoints;
         document.getElementById('hp-points').textContent = this.player.maxHp;
         document.getElementById('mp-points').textContent = this.player.maxMp;
         document.getElementById('attack-points').textContent = this.player.attack;
         document.getElementById('defense-points').textContent = this.player.defense;
         document.getElementById('speed-points').textContent = this.player.speed;
-
-        document.querySelectorAll('.stat-btn').forEach(button => {
-            button.onclick = () => {
-                if (this.player.statPoints > 0) {
-                    const stat = button.dataset.stat;
-                    this.player.statPoints--;
-                    switch (stat) {
-                        case 'hp': this.player.maxHp += 10; this.player.hp += 10; break;
-                        case 'mp': this.player.maxMp += 5; this.player.mp += 5; break;
-                        case 'attack': this.player.attack += 1; break;
-                        case 'defense': this.player.defense += 1; break;
-                        case 'speed': this.player.speed += 1; break;
-                    }
-                    this.updateStatPointsUI();
-                }
-            };
-        });
     }
 
     confirmStatDistribution() {
         this.showScreen('game-screen');
         this.gameState = 'playing';
-        this.updateUI();
     }
     
     gameOver() {
-        this.setBattleMessage('Você foi derrotado!');
         this.showScreen('gameover-screen');
+        document.getElementById('gameover-title').textContent = 'Game Over';
+        document.getElementById('gameover-message').textContent = 'Você foi derrotado!';
         this.gameState = 'gameover';
     }
     
     updateUI() {
-        // Update HUD
-        document.getElementById('player-hp').style.width = `${(this.player.hp / this.player.maxHp) * 100}%`;
-        document.getElementById('player-mana').style.width = `${(this.player.mp / this.player.maxMp) * 100}%`;
+        document.getElementById('player-hp-bar').style.width = `${(this.player.hp / this.player.maxHp) * 100}%`;
+        document.getElementById('player-mp-bar').style.width = `${(this.player.mp / this.player.maxMp) * 100}%`;
+        document.getElementById('player-hp-text').textContent = `${this.player.hp}/${this.player.maxHp}`;
+        document.getElementById('player-mp-text').textContent = `${this.player.mp}/${this.player.maxMp}`;
         document.getElementById('player-level').textContent = `Nível: ${this.player.level}`;
         document.getElementById('player-exp').textContent = `EXP: ${this.player.exp}/${this.player.expToNext}`;
-        document.getElementById('player-gold').textContent = `Ouro: ${this.player.gold}`;
 
-        // Update battle UI
-        if (this.currentEnemy) {
-            document.getElementById('enemy-name').textContent = this.currentEnemy.name;
-            document.getElementById('enemy-hp').style.width = `${(this.currentEnemy.hp / this.currentEnemy.maxHp) * 100}%`;
+        if (this.gameState === 'battle') {
+            this.updateBattleUI();
         }
+    }
+
+    updateBattleUI() {
+        if (!this.currentEnemy) return;
+        document.getElementById('battle-player-hp-bar').style.width = `${(this.player.hp / this.player.maxHp) * 100}%`;
+        document.getElementById('battle-player-mp-bar').style.width = `${(this.player.mp / this.player.maxMp) * 100}%`;
+        document.getElementById('battle-player-hp-text').textContent = `${this.player.hp}/${this.player.maxHp}`;
+        document.getElementById('battle-player-mp-text').textContent = `${this.player.mp}/${this.player.maxMp}`;
+        document.getElementById('enemy-name').textContent = this.currentEnemy.name;
+        document.getElementById('enemy-hp-bar').style.width = `${(this.currentEnemy.hp / this.currentEnemy.maxHp) * 100}%`;
+        document.getElementById('enemy-hp-text').textContent = `${this.currentEnemy.hp}/${this.currentEnemy.maxHp}`;
     }
     
     setBattleMessage(message) {
@@ -688,65 +781,61 @@ class EnhancedMagicTactic {
     
     getElementEffectiveness(attackElement, defenseElement) {
         const chart = this.elementChart[attackElement];
-        if (!chart) return 1; // No specific effectiveness
-        
-        if (chart.strong.includes(defenseElement)) return 1.5; // Super effective
-        if (chart.weak.includes(defenseElement)) return 0.5; // Not very effective
-        
-        return 1; // Normal effectiveness
+        if (!chart) return 1;
+        if (chart.strong.includes(defenseElement)) return 1.5;
+        if (chart.weak.includes(defenseElement)) return 0.5;
+        return 1;
     }
     
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Draw map tiles with scrolling
+        const tileColors = {
+            0: '#228B22', // Grass - ForestGreen
+            1: '#006400', // Tree - DarkGreen
+            2: '#808080', // Rock - Gray
+            3: '#8B4513', // Dead Tree - SaddleBrown
+            4: '#F4A460', // Barren Ground - SandyBrown
+            5: '#1C1C1C', // Dark Ground - Almost black
+            6: '#4B0082', // Dark Pillar - Indigo
+            7: '#A0522D', // House - Sienna
+            8: '#A0522D'  // Cabin - Sienna
+        };
+
+        // Draw map tiles
         for (let y = 0; y < this.mapHeight; y++) {
             for (let x = 0; x < this.mapWidth; x++) {
                 const tileType = this.mapData[y][x];
-                let tileImage = null;
+                let tileImage;
                 switch (tileType) {
-                    case 0: tileImage = this.images.seamless_grass_tile; break; // New grass
+                    case 0: tileImage = this.images.seamless_grass_tile; break;
                     case 1: tileImage = this.images.forest_tree_tile; break;
                     case 2: tileImage = this.images.rock_tile; break;
                     case 3: tileImage = this.images.dead_tree_tile; break;
                     case 4: tileImage = this.images.barren_ground_tile; break;
                     case 5: tileImage = this.images.dark_ground_tile; break;
                     case 6: tileImage = this.images.dark_pillar_tile; break;
-                    case 7: tileImage = this.images.forest_house_tile; break; // House
-                    case 8: tileImage = this.images.forest_cabin_tile; break; // Cabin
+                    case 7: tileImage = this.images.forest_house_tile; break;
+                    case 8: tileImage = this.images.forest_cabin_tile; break;
                 }
                 
-                if (tileImage) {
-                    this.ctx.drawImage(
-                        tileImage,
-                        x * this.tileSize - this.playerOffsetX,
-                        y * this.tileSize - this.playerOffsetY,
-                        this.tileSize,
-                        this.tileSize
-                    );
+                const drawX = x * this.tileSize - this.playerOffsetX;
+                const drawY = y * this.tileSize - this.playerOffsetY;
+
+                if (tileImage && tileImage.naturalWidth > 0) {
+                    this.ctx.drawImage(tileImage, drawX, drawY, this.tileSize, this.tileSize);
+                } else {
+                    // Fallback drawing
+                    this.ctx.fillStyle = tileColors[tileType] || '#FFFFFF';
+                    this.ctx.fillRect(drawX, drawY, this.tileSize, this.tileSize);
                 }
             }
         }
-
-        // Draw dynamic shadows (example, needs more sophisticated logic for movement)
-        if (this.images.cloud_shadow_overlay) {
-            this.ctx.globalAlpha = 0.3; // Semi-transparent
-            this.ctx.drawImage(this.images.cloud_shadow_overlay, 100 - this.playerOffsetX, 100 - this.playerOffsetY, 64, 64);
-            this.ctx.drawImage(this.images.tree_shadow_overlay, 300 - this.playerOffsetX, 200 - this.playerOffsetY, 48, 48);
-            this.ctx.globalAlpha = 1;
-        }
         
         // Draw player
-        if (this.images.player_wizard_sprite) {
-            this.ctx.drawImage(
-                this.images.player_wizard_sprite,
-                this.player.x - this.playerOffsetX - 24, // Center player sprite
-                this.player.y - this.playerOffsetY - 24,
-                48,
-                48
-            );
+        const playerSprite = this.images.player_wizard_sprite;
+        if (playerSprite && playerSprite.naturalWidth > 0) {
+            this.ctx.drawImage(playerSprite, this.player.x - this.playerOffsetX - 24, this.player.y - this.playerOffsetY - 24, 48, 48);
         } else {
-            // Fallback circle
             this.ctx.fillStyle = 'blue';
             this.ctx.beginPath();
             this.ctx.arc(this.player.x - this.playerOffsetX, this.player.y - this.playerOffsetY, 20, 0, 2 * Math.PI);
@@ -754,18 +843,12 @@ class EnhancedMagicTactic {
         }
         
         // Draw enemies
+        const enemySprite = this.images.dark_wizard_sprite;
         this.enemies.forEach(enemy => {
             if (!enemy.defeated) {
-                if (this.images.dark_wizard_sprite) {
-                    this.ctx.drawImage(
-                        this.images.dark_wizard_sprite,
-                        enemy.x - this.playerOffsetX - 24,
-                        enemy.y - this.playerOffsetY - 24,
-                        48,
-                        48
-                    );
+                if (enemySprite && enemySprite.naturalWidth > 0) {
+                    this.ctx.drawImage(enemySprite, enemy.x - this.playerOffsetX - 24, enemy.y - this.playerOffsetY - 24, 48, 48);
                 } else {
-                    // Fallback circle
                     this.ctx.fillStyle = 'red';
                     this.ctx.beginPath();
                     this.ctx.arc(enemy.x - this.playerOffsetX, enemy.y - this.playerOffsetY, 25, 0, 2 * Math.PI);
@@ -775,62 +858,17 @@ class EnhancedMagicTactic {
         });
         
         // Draw boss
+        const bossSprite = this.images.dark_king_sprite;
         if (this.boss.unlocked && !this.boss.defeated) {
-            if (this.images.dark_king_sprite) {
-                this.ctx.drawImage(
-                    this.images.dark_king_sprite,
-                    this.boss.x - this.playerOffsetX - 32, // Center boss sprite
-                    this.boss.y - this.playerOffsetY - 32,
-                    64,
-                    64
-                );
+            if (bossSprite && bossSprite.naturalWidth > 0) {
+                this.ctx.drawImage(bossSprite, this.boss.x - this.playerOffsetX - 32, this.boss.y - this.playerOffsetY - 32, 64, 64);
             } else {
-                // Fallback circle
-                this.ctx.fillStyle = '#4B0082';
+                this.ctx.fillStyle = '#4B0082'; // Indigo
                 this.ctx.beginPath();
                 this.ctx.arc(this.boss.x - this.playerOffsetX, this.boss.y - this.playerOffsetY, 30, 0, 2 * Math.PI);
                 this.ctx.fill();
             }
         }
-    }
-    
-    drawSpellEffects() {
-        this.spellEffects.forEach(effect => {
-            const alpha = 1 - (effect.frame / effect.duration);
-            this.ctx.globalAlpha = alpha;
-            
-            let effectImage = null;
-            switch (effect.spell.element) {
-                case 'fire':
-                    effectImage = this.images.fire_spell_effect;
-                    break;
-                case 'water':
-                    effectImage = this.images.water_spell_effect;
-                    break;
-                case 'light':
-                    effectImage = this.images.heal_spell_effect;
-                    break;
-                case 'air': // New spell effect
-                    effectImage = this.images.lightning_spell_effect;
-                    break;
-                case 'earth': // New spell effect
-                    effectImage = this.images.earthquake_spell_effect;
-                    break;
-                case 'defense': // New spell effect
-                    effectImage = this.images.shield_spell_effect;
-                    break;
-            }
-            
-            if (effectImage) {
-                // Position effects relative to the canvas, not map
-                const targetX = effect.caster === 'player' ? this.canvas.width / 4 : this.canvas.width * 3 / 4;
-                const targetY = this.canvas.height / 2;
-
-                this.ctx.drawImage(effectImage, targetX - 32, targetY - 32, 64, 64);
-            }
-            
-            this.ctx.globalAlpha = 1;
-        });
     }
 }
 

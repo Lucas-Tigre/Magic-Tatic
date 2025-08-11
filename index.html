@@ -112,16 +112,21 @@
 
                 <div id="battle-actions" class="action-menu">
                     <button class="action-btn" id="attack-btn">Atacar</button>
+                    <button class="action-btn" id="item-btn">Itens</button>
                     <button class="action-btn" id="defend-btn">Defender</button>
                     <button class="action-btn" id="run-btn">Fugir</button>
                 </div>
 
                 <div id="spell-menu" class="spell-menu hidden">
                     <h4>Escolha um Feitiço:</h4>
-                    <div id="spell-list" class="spell-list">
-                        <!-- Feitiços serão adicionados dinamicamente -->
-                    </div>
-                    <button id="back-to-actions">Voltar</button>
+                    <div id="spell-list" class="spell-list"></div>
+                    <button id="back-to-actions-from-spell">Voltar</button>
+                </div>
+
+                <div id="item-menu" class="item-menu hidden">
+                    <h4>Escolha um Item:</h4>
+                    <div id="item-list" class="item-list"></div>
+                    <button id="back-to-actions-from-item">Voltar</button>
                 </div>
             </div>
         </div>
