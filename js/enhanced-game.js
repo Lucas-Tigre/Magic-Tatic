@@ -110,6 +110,7 @@ class EnhancedMagicTactic {
         document.getElementById("instructions-screen").classList.remove("active");
         document.getElementById("levelup-screen").classList.remove("active");
         document.getElementById("gameover-screen").classList.remove("active");
+        document.getElementById("inventory-screen").classList.remove("active");
 
         // Set gameLoopRunning to false initially
         this.gameLoopRunning = false;
@@ -249,6 +250,10 @@ class EnhancedMagicTactic {
         this.setupLevelUpListeners();
         document.getElementById('confirm-stats').addEventListener('click', () => this.confirmStatDistribution());
         
+        // Inventory buttons
+        document.getElementById('inventory-btn').addEventListener('click', () => this.showInventory());
+        document.getElementById('close-inventory-btn').addEventListener('click', () => this.hideInventory());
+
         // Keyboard controls
         document.addEventListener('keydown', (e) => {
             this.keys[e.key] = true;
@@ -289,6 +294,48 @@ class EnhancedMagicTactic {
     
     showInstructions() {
         this.showScreen('instructions-screen');
+    }
+
+    showInventory() {
+        this.gameState = 'inventory';
+        this.showScreen('inventory-screen');
+        this.populateInventory();
+    }
+
+    hideInventory() {
+        this.showScreen('game-screen');
+        this.gameState = 'playing';
+    }
+
+    populateInventory() {
+        const inventoryGrid = document.getElementById('inventory-items');
+        inventoryGrid.innerHTML = ''; // Limpa os itens anteriores
+
+        if (this.player.inventory.length === 0) {
+            inventoryGrid.innerHTML = '<p style="color: #ccc; grid-column: 1 / -1; text-align: center;">O inventário está vazio.</p>';
+            return;
+        }
+
+        const itemCounts = this.player.inventory.reduce((acc, itemName) => {
+            acc[itemName] = (acc[itemName] || 0) + 1;
+            return acc;
+        }, {});
+
+        for (const itemName in itemCounts) {
+            const itemData = this.getItemData(itemName);
+            if (!itemData) continue;
+
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'inventory-item';
+            // TODO: Adicionar imagem do item quando os assets estiverem disponíveis
+            // itemDiv.innerHTML = `<img src="assets/images/items/${itemName}.png" alt="${itemData.name}">`;
+            itemDiv.innerHTML += `
+                <span class="item-name">${itemData.name}</span>
+                <span class="item-count">x${itemCounts[itemName]}</span>
+            `;
+
+            inventoryGrid.appendChild(itemDiv);
+        }
     }
 
     restartGame() {
