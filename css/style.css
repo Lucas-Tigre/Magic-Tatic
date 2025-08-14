@@ -564,6 +564,31 @@ body {
     transform: scale(1.1);
 }
 
+/* Bússola do Inimigo */
+.compass {
+    position: absolute;
+    top: 100px; /* Abaixo da HUD principal */
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+    border: 2px solid #ffd700;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.5s ease; /* Animação suave da rotação */
+    z-index: 100; /* Garante que fique sobre outros elementos */
+}
+
+.compass-arrow {
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 20px solid #ff4444; /* Seta vermelha */
+}
+
 /* Responsividade */
 @media (max-width: 768px) {
     #main-menu h1 {

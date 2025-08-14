@@ -95,6 +95,7 @@ class EnhancedMagicTactic {
         this.setupEventListeners();
         this.canvas = document.getElementById("game-canvas");
         this.ctx = this.canvas.getContext("2d");
+        this.compass = document.getElementById('compass');
         this.canvas.width = 800; // Fixed viewport size
         this.canvas.height = 600; // Fixed viewport size
 
@@ -379,10 +380,46 @@ class EnhancedMagicTactic {
         if (this.gameState === 'playing') {
             this.handleMovement();
             this.checkEnemyCollisions();
+            this.updateCompass();
             this.draw();
         }
         // Always update UI regardless of state to reflect changes
         this.updateUI();
+    }
+
+    updateCompass() {
+        if (!this.compass) return;
+
+        const undefeatedEnemies = this.enemies.filter(e => !e.defeated);
+
+        if (this.boss.unlocked && !this.boss.defeated) {
+            undefeatedEnemies.push(this.boss);
+        }
+
+        if (undefeatedEnemies.length === 0) {
+            this.compass.style.display = 'none';
+            return;
+        }
+
+        this.compass.style.display = 'flex';
+
+        let nearestEnemy = null;
+        let minDistance = Infinity;
+
+        for (const enemy of undefeatedEnemies) {
+            const distance = Math.hypot(this.player.x - enemy.x, this.player.y - enemy.y);
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestEnemy = enemy;
+            }
+        }
+
+        if (nearestEnemy) {
+            const angleRad = Math.atan2(nearestEnemy.y - this.player.y, nearestEnemy.x - this.player.x);
+            const angleDeg = angleRad * 180 / Math.PI;
+            // Adicionamos 90 graus porque a seta CSS aponta para cima (que é -90 graus no sistema de coordenadas do atan2)
+            this.compass.style.transform = `rotate(${angleDeg + 90}deg)`;
+        }
     }
     
     handleMovement() {
