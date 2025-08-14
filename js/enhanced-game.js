@@ -326,17 +326,49 @@ class EnhancedMagicTactic {
             const itemData = this.getItemData(itemName);
             if (!itemData) continue;
 
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'inventory-item';
-            // TODO: Adicionar imagem do item quando os assets estiverem disponíveis
-            // itemDiv.innerHTML = `<img src="assets/images/items/${itemName}.png" alt="${itemData.name}">`;
-            itemDiv.innerHTML += `
-                <span class="item-name">${itemData.name}</span>
-                <span class="item-count">x${itemCounts[itemName]}</span>
+            const itemButton = document.createElement('button');
+            itemButton.className = 'inventory-item-btn';
+            itemButton.onclick = () => this.useItemFromInventory(itemName);
+
+            // Adiciona uma classe 'disabled' se o item não for usável fora de combate.
+            // Por enquanto, todos os elixires são usáveis.
+            // if (!itemData.usableOutOfCombat) { itemButton.disabled = true; }
+
+            itemButton.innerHTML = `
+                <div class="inventory-item">
+                    <span class="item-name">${itemData.name}</span>
+                    <span class="item-count">x${itemCounts[itemName]}</span>
+                </div>
             `;
 
-            inventoryGrid.appendChild(itemDiv);
+            inventoryGrid.appendChild(itemButton);
         }
+    }
+
+    useItemFromInventory(itemName) {
+        const item = this.getItemData(itemName);
+        if (!item) return;
+
+        // Futuramente, podemos adicionar uma propriedade 'usableOutOfCombat' nos dados do item.
+        // if (!item.usableOutOfCombat) return;
+
+        // Aplica o efeito
+        if (item.effect.hp) {
+            this.player.hp = Math.min(this.player.maxHp, this.player.hp + item.effect.hp);
+        }
+        if (item.effect.mp) {
+            this.player.mp = Math.min(this.player.maxMp, this.player.mp + item.effect.mp);
+        }
+
+        // Remove um item do inventário
+        const itemIndex = this.player.inventory.indexOf(itemName);
+        if (itemIndex > -1) {
+            this.player.inventory.splice(itemIndex, 1);
+        }
+
+        // Atualiza a UI para refletir a mudança
+        this.updateUI();
+        this.populateInventory();
     }
 
     restartGame() {
